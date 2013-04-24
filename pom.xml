@@ -305,12 +305,6 @@
           <shadedArtifactAttached>true</shadedArtifactAttached>
           <shadedClassifierName>shaded-${classifier}</shadedClassifierName>
           <artifactSet>
-            <excludes>
-              <!-- Old Netty versions break Akka. The new groupId is io.netty. -->
-              <exclude>org.jboss.netty:*</exclude>
-              <!-- Hive is included separately, not as part of the fat jar. -->
-              <exclude>org.apache.hive:*</exclude>
-            </excludes>
           </artifactSet>
           <filters>
             <filter>

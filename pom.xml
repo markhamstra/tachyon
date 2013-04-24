@@ -17,7 +17,7 @@
     <connection>scm:git:git@github.com:clearstorydata/tachyon.git</connection>
     <developerConnection>scm:git:git@github.com:clearstorydata/tachyon.git</developerConnection>
     <url>scm:git:git@github.com:clearstorydata/tachyon.git</url>
-    <tag>HEAD</tag>
+    <tag>tachyon-0.2.1-csd-1</tag>
   </scm>
   <developers>
     <developer>

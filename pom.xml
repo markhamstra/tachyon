@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.tachyonproject</groupId>
   <artifactId>tachyon</artifactId>
-  <version>0.2.1</version>
+  <version>0.2.1-csd-1-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>Tachyon Project POM</name>
   <url>http://tachyonproject.org/</url>
@@ -14,10 +14,10 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git@github.com:amplab/tachyon.git</connection>
-    <developerConnection>scm:git:git@github.com:amplab/tachyon.git</developerConnection>
-    <url>scm:git:git@github.com:amplab/tachyon.git</url>
-    <tag>v0.2.1</tag>
+    <connection>scm:git:git@github.com:clearstorydata/tachyon.git</connection>
+    <developerConnection>scm:git:git@github.com:clearstorydata/tachyon.git</developerConnection>
+    <url>scm:git:git@github.com:clearstorydata/tachyon.git</url>
+    <tag>HEAD</tag>
   </scm>
   <developers>
     <developer>
@@ -33,12 +33,6 @@
     <system>github</system>
     <url>https://spark-project.atlassian.net/browse/TACH</url>
   </issueManagement>
-
-  <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>7</version>
-  </parent>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -71,6 +65,17 @@
 
   <pluginRepositories>
   </pluginRepositories>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>${distRepo.snapshots.id}</id>
+      <url>${distRepo.snapshots.url}</url>
+    </snapshotRepository>
+    <repository>
+      <id>${distRepo.releases.id}</id>
+      <url>${distRepo.releases.url}</url>
+    </repository>
+  </distributionManagement>
 
   <dependencies>
     <dependency>

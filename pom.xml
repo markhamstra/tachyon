@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.tachyonproject</groupId>
   <artifactId>tachyon</artifactId>
-  <version>0.2.2-csd-1</version>
+  <version>0.2.2-csd-1.1</version>
   <packaging>jar</packaging>
   <name>Tachyon Project POM</name>
   <url>http://tachyonproject.org/</url>

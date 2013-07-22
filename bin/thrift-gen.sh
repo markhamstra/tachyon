@@ -1,17 +1,18 @@
 #!/bin/bash
 
-Usage="Usage: thrift-gen.sh"
+Usage="Usage: thrift-gen.sh <thrift_version>"
 
-if [ "$#" -ne 0 ]; then
+if [ "$#" -ne 1 ]; then
   echo $Usage
   exit 1
 fi
+
+thrift_version=$1
 
 bin=`cd "$( dirname "$0" )"; pwd`
 
 rm -rf $bin/../src/main/java/tachyon/thrift
 
-thrift_version=0.7.0
 thrift_binary=/usr/share/thrift-${thrift_version}/bin/thrift
 if [ ! -f "${thrift_binary}" ]; then
   thrift_binary=thrift
@@ -23,5 +24,6 @@ if [ "$( ${thrift_binary} -version )" != "Thrift version ${thrift_version}" ]; t
   exit 1
 fi
 
+set -x
 ${thrift_binary} --gen java -out $bin/../src/main/java/. $bin/../src/thrift/tachyon.thrift
 

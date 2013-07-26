@@ -139,7 +139,7 @@ public class MasterInfo {
       if (hadFailedWorker) {
         LOG.warn("Restarting failed workers.");
         try {
-          java.lang.Runtime.getRuntime().exec(CommonConf.get().TACHYON_HOME + 
+          java.lang.Runtime.getRuntime().exec(CommonConf.get().TACHYON_HOME +
               "/bin/restart-failed-workers.sh");
         } catch (IOException e) {
           LOG.error(e.getMessage());
@@ -331,7 +331,7 @@ public class MasterInfo {
       String name = pathNames[pathNames.length - 1];
       String folderPath = null;
       if (path.length() - name.length() == 1) {
-        folderPath = path.substring(0, path.length() - name.length()); 
+        folderPath = path.substring(0, path.length() - name.length());
       } else {
         folderPath = path.substring(0, path.length() - name.length() - 1);
       }
@@ -427,7 +427,7 @@ public class MasterInfo {
     LOG.info("createRawTable" + CommonUtils.parametersToString(path, columns));
 
     if (columns <= 0 || columns >= Constants.MAX_COLUMNS) {
-      throw new TableColumnException("Column " + columns + " should between 0 to " + 
+      throw new TableColumnException("Column " + columns + " should between 0 to " +
           Constants.MAX_COLUMNS);
     }
 
@@ -870,7 +870,7 @@ public class MasterInfo {
         }
       } else {
         for (InetSocketAddress address: mWorkerAddressToId.keySet()) {
-          if (address.getHostName().equals(host) 
+          if (address.getHostName().equals(host)
               || address.getAddress().getHostAddress().equals(host)
               || address.getAddress().getCanonicalHostName().equals(host)) {
             LOG.debug("getLocalWorker: " + address);
@@ -917,9 +917,9 @@ public class MasterInfo {
     return mWhiteList.getList();
   }
 
-  public List<Integer> listFiles(String path, boolean recursive) 
+  public List<Integer> listFiles(String path, boolean recursive)
       throws InvalidPathException, FileDoesNotExistException {
-    List<Integer> ret = new ArrayList<Integer>(); 
+    List<Integer> ret = new ArrayList<Integer>();
     synchronized (mRoot) {
       Inode inode = getInode(path);
       if (inode == null) {
@@ -948,7 +948,7 @@ public class MasterInfo {
     return ret;
   }
 
-  public List<String> ls(String path, boolean recursive) 
+  public List<String> ls(String path, boolean recursive)
       throws InvalidPathException, FileDoesNotExistException {
     List<String> ret = new ArrayList<String>();
 
@@ -1024,7 +1024,7 @@ public class MasterInfo {
             break;
           }
           case Undefined:
-            CommonUtils.runtimeException("Corruptted data from " + fileName + 
+            CommonUtils.runtimeException("Corruptted data from " + fileName +
                 ". It has undefined data type.");
             break;
           default:
@@ -1142,7 +1142,7 @@ public class MasterInfo {
   }
 
   public void unpinFile(int fileId) throws FileDoesNotExistException {
-    // TODO Change meta data only. Data will be evicted from worker based on data replacement 
+    // TODO Change meta data only. Data will be evicted from worker based on data replacement
     // policy. TODO May change it to be active from V0.2
     LOG.info("unpinFile(" + fileId + ")");
     synchronized (mRoot) {

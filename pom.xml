@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.tachyonproject</groupId>
   <artifactId>tachyon</artifactId>
-  <version>0.3.0-SNAPSHOT</version>
+  <version>0.3.0-csd-1-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>Tachyon Project POM</name>
   <url>http://tachyonproject.org/</url>
@@ -14,10 +14,10 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git@github.com:amplab/tachyon.git</connection>
-    <developerConnection>scm:git:git@github.com:amplab/tachyon.git</developerConnection>
-    <url>scm:git:git@github.com:amplab/tachyon.git</url>
-    <tag>v0.2.1</tag>
+    <connection>scm:git:git@github.com:clearstorydata/tachyon.git</connection>
+    <developerConnection>scm:git:git@github.com:clearstorydata/tachyon.git</developerConnection>
+    <url>scm:git:git@github.com:clearstorydata/tachyon.git</url>
+    <tag>HEAD</tag>
   </scm>
   <developers>
     <developer>
@@ -31,14 +31,8 @@
   </developers>
   <issueManagement>
     <system>github</system>
-    <url>https://spark-project.atlassian.net/browse/TACH</url>
+    <url>https://spark-project.atlassian.net/browse/TACHYON</url>
   </issueManagement>
-
-  <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>7</version>
-  </parent>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -48,6 +42,11 @@
     <jetty.version>7.6.8.v20121106</jetty.version>
     <version.template.file>src/main/java/tachyon/Version.java.template</version.template.file>
     <version.file>src/main/java/tachyon/Version.java</version.file>
+
+    <deb.pkg.name>tachyon-${classifier}</deb.pkg.name>
+    <deb.install.path>/usr/share/tachyon-${classifier}</deb.install.path>
+    <deb.user>root</deb.user>
+
   </properties>
 
   <repositories>
@@ -67,6 +66,17 @@
   <pluginRepositories>
   </pluginRepositories>
 
+  <distributionManagement>
+    <snapshotRepository>
+      <id>${distRepo.snapshots.id}</id>
+      <url>${distRepo.snapshots.url}</url>
+    </snapshotRepository>
+    <repository>
+      <id>${distRepo.releases.id}</id>
+      <url>${distRepo.releases.url}</url>
+    </repository>
+  </distributionManagement>
+
   <dependencies>
     <dependency>
       <groupId>de.javakaffee</groupId>
@@ -75,8 +85,8 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-jsp-2.1</artifactId>
-      <version>7.5.4.v20111024</version>
+      <artifactId>jetty-jsp</artifactId>
+      <version>${jetty.version}</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -106,12 +116,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>1.6.1</version>
+      <version>1.7.5</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
@@ -156,6 +161,9 @@
             </goals>
             <configuration>
               <executable>${basedir}/bin/thrift-gen.sh</executable>
+              <arguments>
+                <argument>${libthrift.version}</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>
@@ -233,6 +241,86 @@
           </replacements>
         </configuration>
       </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.2.1</version>
+        <configuration>
+          <attach>true</attach>
+        </configuration>
+        <executions>
+          <execution>
+            <id>create-source-jar</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.4</version>
+        <executions>
+          <execution>
+            <!-- To make the shade plugin happy (hack to work around MSHADE-134) -->
+            <id>normal-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>classifier-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>${classifier}</classifier>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.0-csd-2</version>
+        <configuration>
+          <shadedArtifactAttached>true</shadedArtifactAttached>
+          <shadedClassifierName>shaded-${classifier}</shadedClassifierName>
+          <artifactSet>
+          </artifactSet>
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+                <exclude>META-INF/*.RSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>reference.conf</resource>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
   </build>
 
@@ -332,6 +420,70 @@
           <version>1.9.0</version>
         </dependency>
       </dependencies>
+    </profile>
+    <profile>
+      <id>deb</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>buildnumber-maven-plugin</artifactId>
+            <version>1.1</version>
+            <executions>
+              <execution>
+                <phase>validate</phase>
+                <goals>
+                  <goal>create</goal>
+                </goals>
+                <configuration>
+                  <shortRevisionLength>8</shortRevisionLength>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.vafer</groupId>
+            <artifactId>jdeb</artifactId>
+            <version>0.11</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>jdeb</goal>
+                </goals>
+                <configuration>
+                  <deb>${project.build.directory}/${deb.pkg.name}_${project.version}-${buildNumber}_all.deb</deb>
+                  <attach>false</attach>
+                  <compression>gzip</compression>
+                  <dataSet>
+                    <data>
+                      <src>${project.build.directory}/${project.artifactId}-${project.version}-shaded-${classifier}.jar</src>
+                      <type>file</type>
+                      <mapper>
+                        <type>perm</type>
+                        <user>${deb.user}</user>
+                        <group>${deb.user}</group>
+                        <prefix>${deb.install.path}/lib</prefix>
+                      </mapper>
+                    </data>
+                    <data>
+                      <src>${basedir}/bin</src>
+                      <type>directory</type>
+                      <mapper>
+                        <type>perm</type>
+                        <user>${deb.user}</user>
+                        <group>${deb.user}</group>
+                        <prefix>${deb.install.path}/bin</prefix>
+                        <filemode>744</filemode>
+                      </mapper>
+                    </data>
+                  </dataSet>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 

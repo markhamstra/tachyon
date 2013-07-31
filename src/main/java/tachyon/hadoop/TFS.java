@@ -21,7 +21,7 @@ import org.apache.log4j.Logger;
 import tachyon.CommonUtils;
 import tachyon.Constants;
 import tachyon.PrefixList;
-import tachyon.SubsumeHdfs;
+import tachyon.UnderfsUtil;
 import tachyon.client.TachyonFS;
 import tachyon.client.TachyonFile;
 import tachyon.client.WriteType;
@@ -35,7 +35,7 @@ import tachyon.thrift.NetAddress;
  * the Tachyon API in tachyon.client package.
  */
 public class TFS extends FileSystem {
-  public static String HDFS_ADDRESS;
+  public static String UNDERFS_ADDRESS;
 
   private final Logger LOG = Logger.getLogger(Constants.LOGGER_TYPE);
 
@@ -49,7 +49,7 @@ public class TFS extends FileSystem {
       Path hdfsPath = Utils.getHDFSPath(path);
       FileSystem fs = hdfsPath.getFileSystem(getConf());
       if (fs.exists(hdfsPath)) {
-        SubsumeHdfs.subsume(mTFS, HDFS_ADDRESS, path, new PrefixList(null));
+        UnderfsUtil.getInfo(mTFS, UNDERFS_ADDRESS, path, new PrefixList(null));
       }
     }
   }
@@ -71,10 +71,6 @@ public class TFS extends FileSystem {
     String path = Utils.getPathWithoutScheme(cPath);
     int fileId = mTFS.createFile(path, blockSize);
     TachyonFile file = mTFS.getFile(fileId);
-    file.getOutStream(WriteType.CACHE_THROUGH);
-//  Path hdfsPath = Utils.getHDFSPath(path);
-//  FileSystem fs = hdfsPath.getFileSystem(getConf());
-//  return fs.create(hdfsPath, permission, overwrite, bufferSize, replication, blockSize, progress);
     return new FSDataOutputStream(file.getOutStream(WriteType.CACHE_THROUGH), null);
   }
 
@@ -108,6 +104,7 @@ public class TFS extends FileSystem {
     fromHdfsToTachyon(tPath);
     TachyonFile file = mTFS.getFile(tPath);
     if (file == null) {
+      LOG.info("File does not exist: " + path);
       throw new FileNotFoundException("File does not exist: " + path);
     }
 
@@ -178,8 +175,8 @@ public class TFS extends FileSystem {
     mTFS = TachyonFS.get(new InetSocketAddress(uri.getHost(), uri.getPort()));
     mTachyonHeader = "tachyon://" + uri.getHost() + ":" + uri.getPort();
     mUri = URI.create(mTachyonHeader);
-    HDFS_ADDRESS = mTFS.getUnderfsAddress();
-    LOG.info(mTachyonHeader + " " + mUri + " " + HDFS_ADDRESS);
+    UNDERFS_ADDRESS = mTFS.getUnderfsAddress();
+    LOG.info(mTachyonHeader + " " + mUri + " " + UNDERFS_ADDRESS);
   }
 
   @Override
@@ -209,9 +206,9 @@ public class TFS extends FileSystem {
   }
 
   @Override
-  public boolean mkdirs(Path cPath, FsPermission permission) throws IOException {
+  public boolean mkdirs(Path cPath, FsPermission permission) throws IOException  {
     LOG.info("mkdirs(" + cPath + ", " + permission + ")");
-    return mTFS.mkdir(Utils.getPathWithoutScheme(cPath)) > 0;
+    return mTFS.mkdir(Utils.getPathWithoutScheme(cPath));
   }
 
   @Override

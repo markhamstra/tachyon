@@ -13,7 +13,7 @@ public abstract class UnderFileSystem {
   public enum SpaceType {
     SPACE_TOTAL(0),
     SPACE_FREE(1),
-    SPACE_USABLE(2);
+    SPACE_USED(2);
 
     private final int value;
 
@@ -30,7 +30,8 @@ public abstract class UnderFileSystem {
   }
 
   public static UnderFileSystem get(String path) {
-    if (path.startsWith("hdfs://") || path.startsWith("file://") || path.startsWith("s3://")) {
+    if (path.startsWith("hdfs://") || path.startsWith("file://") ||
+        path.startsWith("s3://") || path.startsWith("s3n://")) {
       return UnderFileSystemHdfs.getClient(path);
     } else if (path.startsWith("/")) {
       return UnderFileSystemSingleLocal.getClient();
@@ -42,6 +43,11 @@ public abstract class UnderFileSystem {
   public abstract void close() throws IOException;
 
   public abstract OutputStream create(String path) throws IOException;
+
+  public abstract OutputStream create(String path, int blockSizeByte) throws IOException;
+
+  public abstract OutputStream create(String path, short replication, int blockSizeByte)
+      throws IOException;
 
   public abstract boolean delete(String path, boolean recursive) throws IOException;
 

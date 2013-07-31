@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
 
+import tachyon.UnderFileSystem.SpaceType;
 import tachyon.conf.CommonConf;
 import tachyon.conf.MasterConf;
 import tachyon.thrift.BlockInfoException;
@@ -39,7 +40,6 @@ import tachyon.thrift.FileAlreadyExistException;
 import tachyon.thrift.FileDoesNotExistException;
 import tachyon.thrift.InvalidPathException;
 import tachyon.thrift.NetAddress;
-import tachyon.thrift.NoLocalWorkerException;
 import tachyon.thrift.SuspectedFileSizeException;
 import tachyon.thrift.TableColumnException;
 import tachyon.thrift.TableDoesNotExistException;
@@ -305,14 +305,15 @@ public class MasterInfo {
   }
 
   public int createFile(String path, long blockSizeByte)
-      throws FileAlreadyExistException, InvalidPathException, BlockInfoException {
+      throws FileAlreadyExistException, InvalidPathException, BlockInfoException, TachyonException {
     return createFile(true, path, false, -1, null, blockSizeByte);
   }
 
   // TODO Make this API better.
   public int createFile(boolean recursive, String path, boolean directory, int columns,
       ByteBuffer metadata, long blockSizeByte)
-          throws FileAlreadyExistException, InvalidPathException, BlockInfoException {
+          throws FileAlreadyExistException, InvalidPathException, BlockInfoException,
+          TachyonException {
     if (!directory && blockSizeByte < 1) {
       throw new BlockInfoException("Invalid block size " + blockSizeByte);
     }
@@ -324,6 +325,9 @@ public class MasterInfo {
     synchronized (mRoot) {
       Inode inode = getInode(pathNames);
       if (inode != null) {
+        if (inode.isDirectory() && (directory && columns == -1)) {
+          return inode.getId();
+        }
         LOG.info("FileAlreadyExistException: File " + path + " already exist.");
         throw new FileAlreadyExistException("File " + path + " already exist.");
       }
@@ -423,7 +427,8 @@ public class MasterInfo {
   }
 
   public int createRawTable(String path, int columns, ByteBuffer metadata)
-      throws FileAlreadyExistException, InvalidPathException, TableColumnException {
+      throws FileAlreadyExistException, InvalidPathException, TableColumnException, 
+      TachyonException {
     LOG.info("createRawTable" + CommonUtils.parametersToString(path, columns));
 
     if (columns <= 0 || columns >= Constants.MAX_COLUMNS) {
@@ -843,6 +848,16 @@ public class MasterInfo {
     return START_TIME_MS;
   }
 
+  public long getUnderFsCapacityBytes() throws IOException {
+    UnderFileSystem ufs = UnderFileSystem.get(CommonConf.get().UNDERFS_DATA_FOLDER);
+    return ufs.getSpace(CommonConf.get().UNDERFS_DATA_FOLDER, SpaceType.SPACE_TOTAL);
+  }
+
+  public long getUnderFsUsedBytes() throws IOException {
+    UnderFileSystem ufs = UnderFileSystem.get(CommonConf.get().UNDERFS_DATA_FOLDER);
+    return ufs.getSpace(CommonConf.get().UNDERFS_DATA_FOLDER, SpaceType.SPACE_USED);
+  }
+
   public long getUsedBytes() {
     long ret = 0;
     synchronized (mWorkers) {
@@ -853,8 +868,11 @@ public class MasterInfo {
     return ret;
   }
 
-  public NetAddress getWorker(boolean random, String host) throws NoLocalWorkerException {
+  public NetAddress getWorker(boolean random, String host) {
     synchronized (mWorkers) {
+      if (mWorkerAddressToId.isEmpty()) {
+        return null;
+      }
       if (random) {
         int index = new Random(mWorkerAddressToId.size()).nextInt(mWorkerAddressToId.size());
         for (InetSocketAddress address: mWorkerAddressToId.keySet()) {
@@ -880,7 +898,7 @@ public class MasterInfo {
       }
     }
     LOG.info("getLocalWorker: no local worker on " + host);
-    throw new NoLocalWorkerException("getLocalWorker: no local worker on " + host);
+    return null;
   }
 
   public int getWorkerCount() {
@@ -979,10 +997,10 @@ public class MasterInfo {
     return ret;
   }
 
-  public int mkdir(String path)
-      throws FileAlreadyExistException, InvalidPathException {
+  public boolean mkdir(String path)
+      throws FileAlreadyExistException, InvalidPathException, TachyonException {
     try {
-      return createFile(true, path, true, -1, null, 0);
+      return createFile(true, path, true, -1, null, 0) > 0;
     } catch (BlockInfoException e) {
       throw new FileAlreadyExistException(e.getMessage());
     }
@@ -1162,7 +1180,7 @@ public class MasterInfo {
   }
 
   public void updateRawTableMetadata(int tableId, ByteBuffer metadata)
-      throws TableDoesNotExistException {
+      throws TableDoesNotExistException, TachyonException {
     synchronized (mRoot) {
       Inode inode = mInodes.get(tableId);
 

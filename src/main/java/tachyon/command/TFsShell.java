@@ -26,7 +26,7 @@ import tachyon.client.WriteType;
 
 /**
  * Class for handling command line inputs.
- */ 
+ */
 public class TFsShell {
   public void printUsage(String cmd) {}
   public void close() {}
@@ -71,7 +71,7 @@ public class TFsShell {
     String path = argv[1];
     String folder = Utils.getFilePath(path);
     TachyonFS tachyonClient = TachyonFS.get(Utils.getTachyonMasterAddress(path));
-    if (tachyonClient.mkdir(folder) != -1) {
+    if (tachyonClient.mkdir(folder)) {
       System.out.println("Successfully created directory " + folder);
       return 0;
     } else {

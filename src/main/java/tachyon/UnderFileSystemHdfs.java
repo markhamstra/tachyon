@@ -32,9 +32,16 @@ public class UnderFileSystemHdfs extends UnderFileSystem {
       Configuration tConf = new Configuration();
       tConf.set("fs.defaultFS", fsDefaultName);
       tConf.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
+      if (System.getProperty("fs.s3n.awsAccessKeyId") != null) {
+        tConf.set("fs.s3n.awsAccessKeyId", System.getProperty("fs.s3n.awsAccessKeyId"));
+      }
+      if (System.getProperty("fs.s3n.awsSecretAccessKey") != null) {
+        tConf.set("fs.s3n.awsSecretAccessKey", System.getProperty("fs.s3n.awsSecretAccessKey"));
+      }
       Path path = new Path(fsDefaultName);
-      mFs = path.getFileSystem(tConf);// FileSystem.get(tConf);
-      //      mFs = FileSystem.get(new URI(fsDefaultName), tConf);
+      mFs = path.getFileSystem(tConf);
+      // FileSystem.get(tConf);
+      // mFs = FileSystem.get(new URI(fsDefaultName), tConf);
     } catch (IOException e) {
       CommonUtils.runtimeException(e);
     }
@@ -60,6 +67,36 @@ public class UnderFileSystemHdfs extends UnderFileSystem {
       }
     }
     throw te;
+  }
+
+  @Override
+  // BlockSize should be a multiple of 512
+  public FSDataOutputStream create(String path, int blockSizeByte) throws IOException {
+    // TODO Fix this
+    //return create(path, (short) Math.min(3, mFs.getDefaultReplication()), blockSizeByte);
+    return create(path);
+  }
+
+  @Override
+  public FSDataOutputStream create(String path, short replication, int blockSizeByte)
+      throws IOException {
+    // TODO Fix this
+    //return create(path, (short) Math.min(3, mFs.getDefaultReplication()), blockSizeByte);
+    return create(path);
+//    LOG.info(path + " " + replication + " " + blockSizeByte);
+//    IOException te = null;
+//    int cnt = 0;
+//    while (cnt < MAX_TRY) {
+//      try {
+//        return mFs.create(new Path(path), true, 4096, replication, blockSizeByte);
+//      } catch (IOException e) {
+//        cnt ++;
+//        LOG.error(cnt + " : " + e.getMessage(), e);
+//        te = e;
+//        continue;
+//      }
+//    }
+//    throw te;
   }
 
   @Override
@@ -164,7 +201,7 @@ public class UnderFileSystemHdfs extends UnderFileSystem {
         if (mFs.exists(new Path(path))) {
           return true;
         }
-        return mFs.mkdirs(new Path(path), null);
+        return mFs.mkdirs(new Path(path));
       } catch (IOException e) {
         cnt ++;
         LOG.error(cnt + " : " + e.getMessage(), e);

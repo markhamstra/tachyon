@@ -46,7 +46,7 @@ public class TachyonFile implements Comparable<TachyonFile> {
     // E.g.: file size, in memory or not etc.
     // BlockInputStream, FileInputStream.
     if (opType == null) {
-      throw new IOException("OpType can not be null.");
+      throw new IOException("ReadType can not be null.");
     }
 
     if (!isComplete()) {
@@ -66,7 +66,7 @@ public class TachyonFile implements Comparable<TachyonFile> {
 
   public OutStream getOutStream(WriteType opType) throws IOException {
     if (opType == null) {
-      throw new IOException("OpType can not be null.");
+      throw new IOException("WriteType can not be null.");
     }
 
     return new FileOutStream(this, opType);
@@ -273,6 +273,7 @@ public class TachyonFile implements Comparable<TachyonFile> {
         bos.cancel();
       }
     } catch (IOException e) {
+      LOG.info(e);
       return false;
     }
 
@@ -364,7 +365,7 @@ public class TachyonFile implements Comparable<TachyonFile> {
   public long getCreationTimeMs() {
     return TFS.getCreationTimeMs(FID);
   }
-  
+
   String getCheckpointPath() {
     return TFS.getCheckpointPath(FID);
   }

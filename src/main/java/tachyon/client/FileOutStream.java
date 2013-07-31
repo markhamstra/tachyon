@@ -6,9 +6,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-
-import tachyon.Constants;
 import tachyon.UnderFileSystem;
 
 /**
@@ -17,7 +14,6 @@ import tachyon.UnderFileSystem;
  * the client code.
  */
 public class FileOutStream extends OutStream {
-  private final Logger LOG = Logger.getLogger(Constants.LOGGER_TYPE);
   private final long BLOCK_CAPACITY;
 
   private BlockOutStream mCurrentBlockOutStream;
@@ -48,7 +44,11 @@ public class FileOutStream extends OutStream {
     if (WRITE_TYPE.isThrough()) {
       mUnderFsFile = TFS.createAndGetUserUnderfsTempFolder() + "/" + FILE.FID;
       UnderFileSystem underfsClient = UnderFileSystem.get(mUnderFsFile);
-      mCheckpointOutputStream = underfsClient.create(mUnderFsFile);
+      if (BLOCK_CAPACITY > Integer.MAX_VALUE) {
+        throw new IOException("BLOCK_CAPCAITY (" + BLOCK_CAPACITY + ") can not bigger than "
+            + Integer.MAX_VALUE);
+      }
+      mCheckpointOutputStream = underfsClient.create(mUnderFsFile, (int) BLOCK_CAPACITY);
     }
   }
 

@@ -1,6 +1,7 @@
 package tachyon.client;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -53,6 +54,16 @@ public class TachyonFSTest {
     Assert.assertEquals(5, fileId);
   }
 
+  @Test
+  public void createFileTest2() throws Exception {
+    Assert.assertEquals(3, mTfs.createFile("/root/testFile1"));
+    Assert.assertTrue(mTfs.exist("/root/testFile1"));
+    Assert.assertEquals(4, mTfs.createFile("/root/testFile2"));
+    Assert.assertTrue(mTfs.exist("/root/testFile2"));
+    Assert.assertEquals(5, mTfs.createFile("/root/testFile3"));
+    Assert.assertTrue(mTfs.exist("/root/testFile3"));
+  }
+
   @Test(expected = IOException.class)
   public void createFileWithInvalidPathExceptionTest() throws IOException {
     mTfs.createFile("root/testFile1");
@@ -70,7 +81,8 @@ public class TachyonFSTest {
   public void createFileWithCheckpointFileTest() throws IOException {
     String tempFolder = mLocalTachyonCluster.getTempFolderInUnderFs();
     UnderFileSystem underFs = UnderFileSystem.get(tempFolder);
-    underFs.create(tempFolder + "/temp");
+    OutputStream os = underFs.create(tempFolder + "/temp", 100);
+    os.close();
     mTfs.createFile("/abc", tempFolder + "/temp");
     Assert.assertTrue(mTfs.exist("/abc"));
     Assert.assertEquals(tempFolder + "/temp", mTfs.getCheckpointPath(mTfs.getFileId("/abc")));

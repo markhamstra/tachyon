@@ -22,7 +22,7 @@ import tachyon.thrift.FileDoesNotExistException;
 import tachyon.thrift.InvalidPathException;
 import tachyon.thrift.MasterService;
 import tachyon.thrift.NetAddress;
-import tachyon.thrift.NoLocalWorkerException;
+import tachyon.thrift.NoWorkerException;
 import tachyon.thrift.SuspectedFileSizeException;
 import tachyon.thrift.TableColumnException;
 import tachyon.thrift.TableDoesNotExistException;
@@ -71,7 +71,8 @@ public class MasterServiceHandler implements MasterService.Iface {
 
   @Override
   public int user_createFile(String path, long blockSizeByte)
-      throws FileAlreadyExistException, InvalidPathException, BlockInfoException, TException {
+      throws FileAlreadyExistException, InvalidPathException, BlockInfoException, TachyonException,
+      TException {
     return mMasterInfo.createFile(path, blockSizeByte);
   }
 
@@ -100,7 +101,8 @@ public class MasterServiceHandler implements MasterService.Iface {
 
   @Override
   public int user_createRawTable(String path, int columns, ByteBuffer metadata)
-      throws FileAlreadyExistException, InvalidPathException, TableColumnException, TException {
+      throws FileAlreadyExistException, InvalidPathException, TableColumnException,
+      TachyonException, TException {
     return mMasterInfo.createRawTable(
         path, columns, CommonUtils.generateNewByteBufferFromThriftRPCResults(metadata));
   }
@@ -118,8 +120,16 @@ public class MasterServiceHandler implements MasterService.Iface {
 
   @Override
   public NetAddress user_getWorker(boolean random, String host) 
-      throws NoLocalWorkerException, TException {
-    return mMasterInfo.getWorker(random, host);
+      throws NoWorkerException, TException {
+    NetAddress ret = mMasterInfo.getWorker(random, host);
+    if (ret == null) {
+      if (random) {
+        throw new NoWorkerException("No worker in the system");
+      } else {
+        throw new NoWorkerException("No local worker on " + host);
+      }
+    }
+    return ret; 
   }
 
   @Override
@@ -227,8 +237,8 @@ public class MasterServiceHandler implements MasterService.Iface {
   }
 
   @Override
-  public int user_mkdir(String path) 
-      throws FileAlreadyExistException, InvalidPathException, TException {
+  public boolean user_mkdir(String path) 
+      throws FileAlreadyExistException, InvalidPathException, TachyonException, TException {
     return mMasterInfo.mkdir(path);
   }
 
@@ -256,7 +266,7 @@ public class MasterServiceHandler implements MasterService.Iface {
 
   @Override
   public void user_updateRawTableMetadata(int tableId, ByteBuffer metadata)
-      throws TableDoesNotExistException, TException {
+      throws TableDoesNotExistException, TachyonException, TException {
     mMasterInfo.updateRawTableMetadata(tableId, 
         CommonUtils.generateNewByteBufferFromThriftRPCResults(metadata));
   }

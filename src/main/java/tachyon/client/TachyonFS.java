@@ -29,7 +29,7 @@ import tachyon.thrift.ClientRawTableInfo;
 import tachyon.thrift.ClientWorkerInfo;
 import tachyon.thrift.FileDoesNotExistException;
 import tachyon.thrift.NetAddress;
-import tachyon.thrift.NoLocalWorkerException;
+import tachyon.thrift.NoWorkerException;
 
 /**
  * Tachyon's user client API. It contains a MasterClient and several WorkerClients
@@ -124,40 +124,6 @@ public class TachyonFS {
     }
   }
 
-  /**
-   * This API is not recommended to use.
-   * 
-   * @param id file id
-   * @param path existing checkpoint path
-   * @return true if the checkpoint path is added successfully, false otherwise.
-   * @throws IOException
-   * @throws TException
-   */
-  //  public synchronized boolean addCheckpointPath(int id, String path)
-  //      throws IOException, TException {
-  //    connect();
-  //
-  //    UnderFileSystem hdfsClient = UnderFileSystem.get(path);
-  //    long fileSizeBytes = hdfsClient.getFileSize(path);
-  //
-  //    try {
-  //      if (mMasterClient.addCheckpoint(-1, id, fileSizeBytes, path)) {
-  //        ClientFileInfo tInfo = mClientFileInfos.get(id);
-  //        tInfo.length = fileSizeBytes;
-  //        tInfo.checkpointPath = path;
-  //        return true;
-  //      }
-  //    } catch (FileDoesNotExistException e) {
-  //      throw new IOException(e);
-  //    } catch (SuspectedFileSizeException e) {
-  //      throw new IOException(e);
-  //    } catch (BlockInfoException e) {
-  //      throw new IOException(e);
-  //    }
-  //
-  //    return false;
-  //  }
-
   public synchronized void cacheBlock(long blockId) throws IOException  {
     connect();
     if (!mConnected) {
@@ -215,7 +181,7 @@ public class TachyonFS {
       LOG.info("Trying to get local worker host : " + localHostName);
       workerNetAddress = mMasterClient.user_getWorker(false, localHostName);
       mIsWorkerLocal = true;
-    } catch (NoLocalWorkerException e) {
+    } catch (NoWorkerException e) {
       LOG.info(e.getMessage());
       workerNetAddress = null;
     } catch (UnknownHostException e) {
@@ -230,7 +196,7 @@ public class TachyonFS {
     if (workerNetAddress == null) {
       try {
         workerNetAddress = mMasterClient.user_getWorker(true, "");
-      } catch (NoLocalWorkerException e) {
+      } catch (NoWorkerException e) {
         LOG.info(e.getMessage());
         workerNetAddress = null;
       } catch (TException e) {
@@ -241,7 +207,7 @@ public class TachyonFS {
     }
 
     if (workerNetAddress == null) {
-      LOG.error("No worker running in the system");
+      LOG.info("No worker running in the system");
       return;
     }
 
@@ -489,7 +455,8 @@ public class TachyonFS {
     }
   }
 
-  private synchronized ClientFileInfo getClientFileInfo(String path, boolean useCachedMetadata) { 
+  private synchronized ClientFileInfo getClientFileInfo(String path, boolean useCachedMetadata)
+      throws IOException { 
     connect();
     if (!mConnected) {
       return null;
@@ -600,7 +567,8 @@ public class TachyonFS {
     return getFile(path, false);
   }
 
-  public synchronized TachyonFile getFile(String path, boolean useCachedMetadata) {
+  public synchronized TachyonFile getFile(String path, boolean useCachedMetadata) 
+      throws IOException {
     path = CommonUtils.cleanPath(path);
     ClientFileInfo clientFileInfo = getClientFileInfo(path, useCachedMetadata);
     if (clientFileInfo == null) {
@@ -792,9 +760,6 @@ public class TachyonFS {
   public synchronized List<ClientFileInfo> listStatus(String path)
       throws IOException {
     connect();
-    if (!mConnected) {
-      return null;
-    }
     try {
       return mMasterClient.listStatus(path);
     } catch (TException e) {
@@ -834,23 +799,20 @@ public class TachyonFS {
   /**
    * Create a directory if it does not exist.
    * @param path Directory path.
-   * @return The inode ID of the directory if it is successfully created. -1 if not.
+   * @return true if the folder is created succeefully. faluse otherwise.
    * @throws IOException
    */
-  public synchronized int mkdir(String path) throws IOException {
+  public synchronized boolean mkdir(String path) throws IOException {
     connect();
     if (!mConnected) {
-      return -1;
+      return false;
     }
     path = CommonUtils.cleanPath(path);
-    int id = -1;
     try {
-      id = mMasterClient.user_mkdir(path);
+      return mMasterClient.user_mkdir(path);
     } catch (TException e) {
-      LOG.info(e.getMessage());
-      id = -1;
+      throw new IOException(e);
     }
-    return id;
   }
 
   public synchronized void outOfMemoryForPinFile(int fid) {

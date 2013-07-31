@@ -32,6 +32,21 @@ public class UnderFileSystemSingleLocal extends UnderFileSystem {
   }
 
   @Override
+  public OutputStream create(String path, int blockSizeByte) throws IOException {
+    return create(path, (short) 1, blockSizeByte);
+  }
+
+  @Override
+  public OutputStream create(String path, short replication, int blockSizeByte)
+      throws IOException {
+    if (replication != 1) {
+      throw new IOException("UnderFileSystemSingleLocal does not provide more than one" +
+          " replication factor");
+    }
+    return new FileOutputStream(path);
+  }
+
+  @Override
   public boolean delete(String path, boolean recursive) throws IOException {
     File file = new File(path);
     return file.delete();
@@ -78,8 +93,8 @@ public class UnderFileSystemSingleLocal extends UnderFileSystem {
         return file.getTotalSpace();
       case SPACE_FREE:
         return file.getFreeSpace();
-      case SPACE_USABLE:
-        return file.getUsableSpace();
+      case SPACE_USED:
+        return file.getTotalSpace() - file.getFreeSpace();
     }
     throw new IOException("Unknown getSpace parameter: " + type);
   }
@@ -87,10 +102,7 @@ public class UnderFileSystemSingleLocal extends UnderFileSystem {
   @Override
   public boolean mkdirs(String path, boolean createParent) throws IOException {
     File file = new File(path);
-    if (createParent) {
-      return file.mkdirs();
-    }
-    return file.mkdir();
+    return createParent ? file.mkdirs(): file.mkdir();
   }
 
   @Override

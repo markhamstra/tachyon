@@ -96,8 +96,7 @@ public class BlockOutStream extends OutStream {
       throw new IOException(msg);
     }
 
-    MappedByteBuffer out = 
-        mLocalFileChannel.map(MapMode.READ_WRITE, mInFileBytes, length);
+    MappedByteBuffer out = mLocalFileChannel.map(MapMode.READ_WRITE, mInFileBytes, length);
     out.put(buf, 0, length);
     mInFileBytes += length;
   }
@@ -131,7 +130,8 @@ public class BlockOutStream extends OutStream {
       throw new NullPointerException();
     } else if ((off < 0) || (off > b.length) || (len < 0) ||
         ((off + len) > b.length) || ((off + len) < 0)) {
-      throw new IndexOutOfBoundsException();
+      throw new IndexOutOfBoundsException(String.format(
+          "Buffer length (%d), offset(%d), len(%d)", b.length, off, len));
     }
 
     if (!mCanWrite) {
@@ -180,7 +180,7 @@ public class BlockOutStream extends OutStream {
         try {
           TFS.cacheBlock(BLOCK_ID);
         } catch (IOException e) {
-          if (WRITE_TYPE == WriteType.CACHE) {
+          if (WRITE_TYPE == WriteType.MUST_CACHE) {
             throw e;
           }
         }

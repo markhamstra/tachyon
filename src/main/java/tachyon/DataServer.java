@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.thrift.TException;
 import org.apache.log4j.Logger;
 
 /**
@@ -36,16 +35,21 @@ public class DataServer implements Runnable {
   private Map<SocketChannel, DataServerMessage> mReceivingData =
       Collections.synchronizedMap(new HashMap<SocketChannel, DataServerMessage>());
 
-  // The local worker storage.
-  private WorkerStorage mWorkerStorage;
+  // The blocks locker manager.
+  private final BlocksLocker mBlocksLocker;
 
   private boolean mShutdown = false;
   private boolean mShutdowned = false;
 
+  /**
+   * Create a data server with direct access to worker storage.
+   * @param address The address of the data server.
+   * @param workerStorage The handler of the directly accessed worker storage.
+   */
   public DataServer(InetSocketAddress address, WorkerStorage workerStorage) {
     LOG.info("Starting DataServer @ " + address);
     mAddress = address;
-    mWorkerStorage = workerStorage;
+    mBlocksLocker = new BlocksLocker(workerStorage, Users.sDATASERVER_USER_ID);
     try {
       mSelector = initSelector();
     } catch (IOException e) {
@@ -118,18 +122,17 @@ public class DataServer implements Runnable {
     }
 
     if (tMessage.isMessageReady()) {
+      if (tMessage.getBlockId() <= 0) {
+        LOG.error("Invalid block id " + tMessage.getBlockId());
+        return;
+      }
+
       key.interestOps(SelectionKey.OP_WRITE);
       LOG.info("Get request for " + tMessage.getBlockId());
-      try {
-        mWorkerStorage.lockBlock(tMessage.getBlockId(), Users.sDATASERVER_USER_ID);
-      } catch (TException e) {
-        CommonUtils.runtimeException(e);
-      }
-      DataServerMessage tResponseMessage = 
-          DataServerMessage.createBlockResponseMessage(true, tMessage.getBlockId()); 
-      if (tResponseMessage.getBlockId() > 0) {
-        mWorkerStorage.accessBlock(tResponseMessage.getBlockId());
-      }
+      int lockId = mBlocksLocker.lock(tMessage.getBlockId());
+      DataServerMessage tResponseMessage = DataServerMessage.createBlockResponseMessage(
+          true, tMessage.getBlockId(), tMessage.getOffset(), tMessage.getLength());
+      tResponseMessage.setLockId(lockId);
       mSendingData.put(socketChannel, tResponseMessage);
     }
   }
@@ -157,12 +160,7 @@ public class DataServer implements Runnable {
       mReceivingData.remove(socketChannel);
       mSendingData.remove(socketChannel);
       sendMessage.close();
-
-      try {
-        mWorkerStorage.unlockBlock(sendMessage.getBlockId(), Users.sDATASERVER_USER_ID);
-      } catch (TException e) {
-        CommonUtils.runtimeException(e);
-      }
+      mBlocksLocker.unlock(Math.abs(sendMessage.getBlockId()), sendMessage.getLockId());
     }
   }
 

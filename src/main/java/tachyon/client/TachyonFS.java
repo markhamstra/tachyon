@@ -1,11 +1,14 @@
 package tachyon.client;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +24,7 @@ import tachyon.UnderFileSystem;
 import tachyon.MasterClient;
 import tachyon.CommonUtils;
 import tachyon.WorkerClient;
+import tachyon.client.table.RawTable;
 import tachyon.conf.UserConf;
 import tachyon.thrift.BlockInfoException;
 import tachyon.thrift.ClientBlockInfo;
@@ -66,15 +70,15 @@ public class TachyonFS {
   // The user id of the client.
   private long mUserId = 0;
 
-  // All files has been locked.
-  private Set<Long> mLockedBlockIds = new HashSet<Long>();
+  // All Blocks has been locked.
+  private Map<Long, Set<Integer>> mLockedBlockIds = new HashMap<Long, Set<Integer>>();
+  // Each user facing block has a unique block lock id.
+  private AtomicInteger mBlockLockId = new AtomicInteger(0);
 
   // Available memory space for this client.
   private Long mAvailableSpaceBytes;
 
   private boolean mConnected = false;
-
-  private AtomicInteger mStreamIds = new AtomicInteger(0);
 
   private TachyonFS(InetSocketAddress masterAddress) {
     mMasterAddress = masterAddress;
@@ -636,7 +640,7 @@ public class TachyonFS {
       mClientFileInfos.put(fId, info);
     }
     if (info == null) {
-      throw new IOException("File " + fId + " doex not exist.");
+      throw new IOException("File " + fId + " does not exist.");
     }
     return info.getBlockIds().size();
   }
@@ -687,8 +691,8 @@ public class TachyonFS {
     return mLocalDataFolder;
   }
 
-  public int getStreamId() {
-    return mStreamIds.getAndIncrement();
+  public int getBlockLockId() {
+    return mBlockLockId.getAndIncrement();
   }
 
   public synchronized String getUnderfsAddress() throws IOException {
@@ -778,21 +782,36 @@ public class TachyonFS {
     }
   }
 
-  public synchronized boolean lockBlock(long blockId) {
-    if (mLockedBlockIds.contains(blockId)) {
+  /**
+   * Lock a block in the current TachyonFS.
+   * @param blockId The id of the block to lock. <code>blockId</code> must be positive.
+   * @param blockLockId The block lock id of the block of lock. 
+   * <code>blockLockId</code> must be non-negative.
+   * @return true if successfully lock the block, false otherwise (or invalid parameter).
+   */
+  synchronized boolean lockBlock(long blockId, int blockLockId) {
+    if (blockId <= 0 || blockLockId < 0) {
+      return false;
+    }
+
+    if (mLockedBlockIds.containsKey(blockId)) {
+      mLockedBlockIds.get(blockId).add(blockLockId);
       return true;
     }
+
     connect();
     if (!mConnected || mWorkerClient == null || !mIsWorkerLocal) {
       return false;
     }
     try {
       mWorkerClient.lockBlock(blockId, mUserId);
-      mLockedBlockIds.add(blockId);
     } catch (TException e) {
       LOG.error(e.getMessage());
       return false;
     }
+    Set<Integer> lockIds = new HashSet<Integer>(4);
+    lockIds.add(blockLockId);
+    mLockedBlockIds.put(blockId, lockIds);
     return true;
   }
 
@@ -824,6 +843,77 @@ public class TachyonFS {
         LOG.error(e.getMessage());
       }
     }
+  }
+
+  /**
+   * Read the whole local block.
+   * @param blockId The id of the block to read.
+   * @return <code>TachyonByteBuffer</code> containing the whole block.
+   * @throws IOException
+   */
+  TachyonByteBuffer readLocalByteBuffer(long blockId) throws IOException {
+    return readLocalByteBuffer(blockId, 0, -1);
+  }
+
+  /**
+   * Read local block return a TachyonByteBuffer
+   * @param blockId The id of the block.
+   * @param offset The start position to read.
+   * @param len The length to read. -1 represents read the whole block.
+   * @return <code>TachyonByteBuffer</code> containing the block.
+   * @throws IOException
+   */
+  TachyonByteBuffer readLocalByteBuffer(long blockId, long offset, long len) throws IOException {
+    if (offset < 0) {
+      throw new IOException("Offset can not be negative: " + offset);
+    }
+    if (len < 0 && len != -1) {
+      throw new IOException("Length can not be negative except -1: " + len);
+    }
+
+    int blockLockId = getBlockLockId();
+    if (!lockBlock(blockId, blockLockId)) {
+      return null;
+    }
+    String rootFolder = getRootFolder();
+    if (rootFolder != null) {
+      String localFileName = rootFolder + Constants.PATH_SEPARATOR + blockId;
+      try {
+        RandomAccessFile localFile = new RandomAccessFile(localFileName, "r");
+
+        long fileLength = localFile.length();
+        String error = null;
+        if (offset > fileLength) {
+          error = String.format("Offset(%d) is larger than file length(%d)", offset, fileLength);
+        }
+        if (error == null && len != -1 && offset + len > fileLength) {
+          error = String.format("Offset(%d) plus length(%d) is larger than file length(%d)", 
+              offset, len, fileLength);
+        }
+        if (error != null) {
+          localFile.close();
+          throw new IOException(error);
+        }
+
+        if (len == -1) {
+          len = fileLength - offset;
+        }
+
+        FileChannel localFileChannel = localFile.getChannel();
+        ByteBuffer buf = localFileChannel.map(FileChannel.MapMode.READ_ONLY, offset, len);
+        localFileChannel.close();
+        localFile.close();
+        accessLocalBlock(blockId);
+        return new TachyonByteBuffer(this, buf, blockId, blockLockId);
+      } catch (FileNotFoundException e) {
+        LOG.info(localFileName + " is not on local disk.");
+      } catch (IOException e) {
+        LOG.info("Failed to read local file " + localFileName + " because: \n" + e.getMessage());
+      }
+    }
+
+    unlockBlock(blockId, blockLockId);
+    return null;
   }
 
   public synchronized void releaseSpace(long releaseSpaceBytes) {
@@ -922,10 +1012,28 @@ public class TachyonFS {
     return true;
   }
 
-  public synchronized boolean unlockBlock(long blockId) {
-    if (!mLockedBlockIds.contains(blockId)) {
+  /**
+   * Unlock a block in the current TachyonFS.
+   * @param blockId The id of the block to unlock. <code>blockId</code> must be positive.
+   * @param blockLockId The block lock id of the block of unlock. 
+   * <code>blockLockId</code> must be non-negative.
+   * @return true if successfully unlock the block with <code>blockLockId</code>,
+   * false otherwise (or invalid parameter).
+   */
+  synchronized boolean unlockBlock(long blockId, int blockLockId) {
+    if (blockId <= 0 || blockLockId < 0) {
+      return false;
+    }
+
+    if (!mLockedBlockIds.containsKey(blockId)) {
       return true;
     }
+    Set<Integer> lockIds = mLockedBlockIds.get(blockId);
+    lockIds.remove(blockLockId);
+    if (!lockIds.isEmpty()) {
+      return true;
+    }
+
     connect();
     if (!mConnected || mWorkerClient == null || !mIsWorkerLocal) {
       return false;

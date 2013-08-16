@@ -8,14 +8,13 @@ import tachyon.thrift.TachyonException;
  * Tachyon file system's RawTable representation in master.
  */
 public class InodeRawTable extends InodeFolder {
-
   protected final int COLUMNS;
 
   private ByteBuffer mMetadata;
 
-  public InodeRawTable(String name, int id, int parentId, int columns, ByteBuffer metadata)
-      throws TachyonException {
-    super(name, id, parentId, InodeType.RawTable);
+  public InodeRawTable(String name, int id, int parentId, int columns, ByteBuffer metadata,
+      long creationTimeMs) throws TachyonException {
+    super(name, id, parentId, InodeType.RawTable, creationTimeMs);
     COLUMNS = columns;
     updateMetadata(metadata);
   }
@@ -33,7 +32,7 @@ public class InodeRawTable extends InodeFolder {
         throw new TachyonException("Too big table metadata: " + metadata.toString());
       }
       mMetadata = ByteBuffer.allocate(metadata.limit() - metadata.position());
-      mMetadata.put(metadata);
+      mMetadata.put(metadata.array(), metadata.position(), metadata.limit() - metadata.position());
       mMetadata.flip();
     }
   }

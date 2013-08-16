@@ -71,6 +71,14 @@ public class LocalTachyonCluster {
     return mMaster.getMasterInfo();
   }
 
+  String getEditLogPath() {
+    return mTachyonHome + "/journal/log.data";
+  }
+
+  String getImagePath() {
+    return mTachyonHome + "/journal/image.data";
+  }
+
   private void mkdir(String path) throws IOException {
     if (!(new File(path)).mkdirs()) {
       throw new IOException("Failed to make folder: " + path);
@@ -84,10 +92,12 @@ public class LocalTachyonCluster {
   public void start() throws IOException {
     mTachyonHome = File.createTempFile("Tachyon", "").getAbsoluteFile() + "UnitTest";
     mWorkerDataFolder = mTachyonHome + "/ramdisk";
+    String masterJournalFolder = mTachyonHome + "/journal";
     String masterDataFolder = mTachyonHome + "/data";
     String masterLogFolder = mTachyonHome + "/logs";
     String underfsFolder = mTachyonHome + "/underfs";
     mkdir(mTachyonHome);
+    mkdir(masterJournalFolder);
     mkdir(masterDataFolder);
     mkdir(masterLogFolder);
 
@@ -113,7 +123,6 @@ public class LocalTachyonCluster {
 
     mMaster = Master.createMaster(
         new InetSocketAddress(mLocalhostName, mMasterPort), mMasterPort + 1, 1, 1, 1);
-
     Runnable runMaster = new Runnable() {
       public void run() {
         mMaster.start();

@@ -103,6 +103,20 @@ exception TachyonException {
   1: string message
 }
 
+service CoordinatorService {
+  /**
+   * Get the max transaction id of one master.
+   * @return max transaction of the master
+   */
+  i64 getMaxTransactionId()
+
+  /**
+   * Send transactions.
+   * @return max transaction id.
+   */
+  i64 sendNewTransactions(1: i64 leftTransactionId, 2: i64 rightTransactionId, 3: list<binary> transactions)
+}
+
 service MasterService {
   bool addCheckpoint(1: i64 workerId, 2: i32 fileId, 3: i64 length, 4: string checkpointPath)
     throws (1: FileDoesNotExistException eP, 2: SuspectedFileSizeException eS, 3: BlockInfoException eB)

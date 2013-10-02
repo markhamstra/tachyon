@@ -2,6 +2,9 @@ package tachyon.client;
 
 import java.io.IOException;
 
+/**
+ * FileInStream implementation of TachyonFile.
+ */
 public class FileInStream extends InStream {
   private final long FILE_LENGTH;
   private final long BLOCK_CAPACITY;
@@ -36,7 +39,7 @@ public class FileInStream extends InStream {
       }
 
       mCurrentBlockIndex = getCurrentBlockIndex();
-      mCurrentBlockInStream = new BlockInStream(FILE, READ_TYPE, mCurrentBlockIndex);
+      mCurrentBlockInStream = BlockInStream.get(FILE, READ_TYPE, mCurrentBlockIndex);
       mCurrentBlockLeft = BLOCK_CAPACITY;
     }
   }
@@ -116,7 +119,7 @@ public class FileInStream extends InStream {
       }
 
       mCurrentBlockIndex = tBlockIndex;
-      mCurrentBlockInStream = new BlockInStream(FILE, READ_TYPE, mCurrentBlockIndex);
+      mCurrentBlockInStream = BlockInStream.get(FILE, READ_TYPE, mCurrentBlockIndex);
       long shouldSkip = mCurrentPosition % BLOCK_CAPACITY;
       long skip = mCurrentBlockInStream.skip(shouldSkip);
       mCurrentBlockLeft = BLOCK_CAPACITY - skip;

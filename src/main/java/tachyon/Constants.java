@@ -13,6 +13,8 @@ public class Constants {
   public static final long MINUTE_MS = SECOND_MS * 60;
   public static final long HOUR_MS = MINUTE_MS * 60;
   public static final long DAY_MS = HOUR_MS * 24;
+  
+  public static final String FT_HEADER = "tachyon_ft://";
 
   public static final int DEFAULT_MASTER_PORT = 19998;
   public static final int DEFAULT_MASTER_WEB_PORT = DEFAULT_MASTER_PORT + 1;
@@ -28,4 +30,6 @@ public class Constants {
 
   public static final String LOGGER_TYPE = System.getProperty("tachyon.logger.type", "");
   public static final boolean DEBUG = Boolean.valueOf(System.getProperty("tachyon.debug", "false"));
+  
+  public static final int JOURNAL_VERSION = 1; // The version keeps increasing.
 }

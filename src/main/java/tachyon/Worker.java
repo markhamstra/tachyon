@@ -102,25 +102,25 @@ public class Worker implements Runnable {
 
       if (cmd != null) {
         switch (cmd.mCommandType) {
-          case Unknown :
-            LOG.error("Unknown command: " + cmd);
-            break;
-          case Nothing :
-            LOG.debug("Nothing command: " + cmd);
-            break;
-          case Register :
-            mWorkerStorage.register();
-            LOG.info("Register command: " + cmd);
-            break;
-          case Free :
-            mWorkerStorage.freeBlocks(cmd.mData);
-            LOG.info("Free command: " + cmd);
-            break;
-          case Delete :
-            LOG.info("Delete command: " + cmd);
-            break;
-          default :
-            CommonUtils.runtimeException("Un-recognized command from master " + cmd.toString());
+        case Unknown :
+          LOG.error("Unknown command: " + cmd);
+          break;
+        case Nothing :
+          LOG.debug("Nothing command: " + cmd);
+          break;
+        case Register :
+          LOG.info("Register command: " + cmd);
+          mWorkerStorage.register();
+          break;
+        case Free :
+          mWorkerStorage.freeBlocks(cmd.mData);
+          LOG.info("Free command: " + cmd);
+          break;
+        case Delete :
+          LOG.info("Delete command: " + cmd);
+          break;
+        default :
+          CommonUtils.runtimeException("Un-recognized command from master " + cmd.toString());
         }
       }
 

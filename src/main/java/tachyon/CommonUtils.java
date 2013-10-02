@@ -1,5 +1,7 @@
 package tachyon;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -21,7 +23,10 @@ public final class CommonUtils {
   private CommonUtils () {
   }
 
-  public static String cleanPath(String path) {
+  public static String cleanPath(String path) throws IOException {
+    if (path == null || path.isEmpty()) {
+      throw new IOException("Path (" + path + ") is invalid.");
+    }
     while (path.endsWith("/") && path.length() > 1) {
       path = path.substring(0, path.length() - 1);
     }
@@ -163,6 +168,7 @@ public final class CommonUtils {
   }
 
   public static long parseMemorySize(String memorySize) {
+    double alpha = 0.0001;
     String ori = memorySize;
     String end = "";
     int tIndex = memorySize.length() - 1;
@@ -175,16 +181,18 @@ public final class CommonUtils {
       tIndex --;
     }
     memorySize = memorySize.substring(0, tIndex + 1);
-    long ret = Long.parseLong(memorySize);
+    double ret = Double.parseDouble(memorySize);
     end = end.toLowerCase();
     if (end.equals("") || end.equals("b")) {
-      return ret;
+      return (long) (ret + alpha);
     } else if (end.equals("kb")) {
-      return ret * Constants.KB;
+      return (long) (ret * Constants.KB + alpha);
     } else if (end.equals("mb")) {
-      return ret * Constants.MB;
+      return (long) (ret * Constants.MB + alpha);
     } else if (end.equals("gb")) {
-      return ret * Constants.GB;
+      return (long) (ret * Constants.GB + alpha);
+    } else if (end.equals("tb")) {
+      return (long) (ret * Constants.TB + alpha);
     }
     runtimeException("Fail to parse " + ori + " as memory size");
     return -1;
@@ -239,5 +247,22 @@ public final class CommonUtils {
         path.contains(" ")) {
       throw new InvalidPathException("Path " + path + " is invalid.");
     }
+  }
+
+  /**
+   * Parse InetSocketAddress from a String
+   * @param address
+   * @return
+   * @throws IOException
+   */
+  public static InetSocketAddress parseInetSocketAddress(String address) throws IOException {
+    if (address == null) {
+      return null;
+    }
+    String[] strArr = address.split(":");
+    if (strArr.length != 2) {
+      throw new IOException("Invalid InetSocketAddress " + address);
+    }
+    return new InetSocketAddress(strArr[0], Integer.parseInt(strArr[1]));
   }
 }

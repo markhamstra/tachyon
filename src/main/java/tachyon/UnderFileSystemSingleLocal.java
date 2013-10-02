@@ -27,6 +27,11 @@ public class UnderFileSystemSingleLocal extends UnderFileSystem {
   }
 
   @Override
+  public OutputStream create(String path) throws IOException {
+    return new FileOutputStream(path);
+  }
+
+  @Override
   public OutputStream create(String path, int blockSizeByte) throws IOException {
     return create(path, (short) 1, blockSizeByte);
   }
@@ -44,7 +49,15 @@ public class UnderFileSystemSingleLocal extends UnderFileSystem {
   @Override
   public boolean delete(String path, boolean recursive) throws IOException {
     File file = new File(path);
-    return file.delete();
+    boolean success = true;
+    if (recursive && file.isDirectory()) {
+      String[] files = file.list();
+      for (String child : files) {
+        success = success && delete(path + "/" + child, true);
+      }
+    }
+
+    return success && file.delete();
   }
 
   @Override
@@ -84,12 +97,12 @@ public class UnderFileSystemSingleLocal extends UnderFileSystem {
   public long getSpace(String path, SpaceType type) throws IOException {
     File file = new File(path);
     switch (type) {
-      case SPACE_TOTAL:
-        return file.getTotalSpace();
-      case SPACE_FREE:
-        return file.getFreeSpace();
-      case SPACE_USED:
-        return file.getTotalSpace() - file.getFreeSpace();
+    case SPACE_TOTAL:
+      return file.getTotalSpace();
+    case SPACE_FREE:
+      return file.getFreeSpace();
+    case SPACE_USED:
+      return file.getTotalSpace() - file.getFreeSpace();
     }
     throw new IOException("Unknown getSpace parameter: " + type);
   }
@@ -97,10 +110,7 @@ public class UnderFileSystemSingleLocal extends UnderFileSystem {
   @Override
   public boolean mkdirs(String path, boolean createParent) throws IOException {
     File file = new File(path);
-    if (createParent) {
-      return file.mkdirs();
-    }
-    return file.mkdir();
+    return createParent ? file.mkdirs(): file.mkdir();
   }
 
   @Override

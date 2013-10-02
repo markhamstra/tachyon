@@ -57,19 +57,27 @@ public final class TestUtils {
   }
 
   public static byte[] getIncreasingByteArray(int len) {
+    return getIncreasingByteArray(0, len);
+  }
+
+  public static byte[] getIncreasingByteArray(int start, int len) {
     byte[] ret = new byte[len];
     for (int k = 0; k < len; k ++) {
-      ret[k] = (byte) k;
+      ret[k] = (byte) (k + start);
     }
     return ret;
   }
 
   public static boolean equalIncreasingByteArray(int len, byte[] arr) {
-    if (arr == null || arr.length != len) {
+    return equalIncreasingByteArray(0, len, arr);
+  }
+
+  public static boolean equalIncreasingByteArray(int start, int len, byte[] arr) {
+    if (arr == null || arr.length < len) {
       return false;
     }
     for (int k = 0; k < len; k ++) {
-      if (arr[k] != (byte) k) {
+      if (arr[k] != (byte) (start + k)) {
         return false;
       }
     }
@@ -77,12 +85,11 @@ public final class TestUtils {
   }
 
   public static ByteBuffer getIncreasingByteBuffer(int len) {
-    ByteBuffer ret = ByteBuffer.allocate(len);
-    for (int k = 0; k < len; k ++) {
-      ret.put((byte) k);
-    }
-    ret.flip();
-    return ret;
+    return getIncreasingByteBuffer(0, len);
+  }
+
+  public static ByteBuffer getIncreasingByteBuffer(int start, int len) {
+    return ByteBuffer.wrap(getIncreasingByteArray(start, len));
   }
 
   public static ByteBuffer getIncreasingIntBuffer(int len) {

@@ -12,13 +12,14 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.log4j.Logger;
 
 /**
  * HDFS UnderFilesystem implementation.
  */
 public class UnderFileSystemHdfs extends UnderFileSystem {
-  private static final int MAX_TRY = 5; 
+  private static final int MAX_TRY = 5;
   private final Logger LOG = Logger.getLogger(Constants.LOGGER_TYPE);
 
   private FileSystem mFs = null;
@@ -32,6 +33,12 @@ public class UnderFileSystemHdfs extends UnderFileSystem {
       Configuration tConf = new Configuration();
       tConf.set("fs.defaultFS", fsDefaultName);
       tConf.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
+      if (System.getProperty("fs.s3n.awsAccessKeyId") != null) {
+        tConf.set("fs.s3n.awsAccessKeyId", System.getProperty("fs.s3n.awsAccessKeyId"));
+      }
+      if (System.getProperty("fs.s3n.awsSecretAccessKey") != null) {
+        tConf.set("fs.s3n.awsSecretAccessKey", System.getProperty("fs.s3n.awsSecretAccessKey"));
+      }
       Path path = new Path(fsDefaultName);
       mFs = path.getFileSystem(tConf);
       // FileSystem.get(tConf);
@@ -47,18 +54,12 @@ public class UnderFileSystemHdfs extends UnderFileSystem {
   }
 
   @Override
-  public FSDataOutputStream create(String path, int blockSizeByte) throws IOException {
-    return create(path, (short) 3, blockSizeByte);
-  }
-
-  @Override
-  public FSDataOutputStream create(String path, short replication, int blockSizeByte)
-      throws IOException {
+  public FSDataOutputStream create(String path) throws IOException {
     IOException te = null;
     int cnt = 0;
     while (cnt < MAX_TRY) {
       try {
-        return mFs.create(new Path(path), true, 4096, replication, blockSizeByte);
+        return mFs.create(new Path(path));
       } catch (IOException e) {
         cnt ++;
         LOG.error(cnt + " : " + e.getMessage(), e);
@@ -67,6 +68,36 @@ public class UnderFileSystemHdfs extends UnderFileSystem {
       }
     }
     throw te;
+  }
+
+  @Override
+  // BlockSize should be a multiple of 512
+  public FSDataOutputStream create(String path, int blockSizeByte) throws IOException {
+    // TODO Fix this
+    //return create(path, (short) Math.min(3, mFs.getDefaultReplication()), blockSizeByte);
+    return create(path);
+  }
+
+  @Override
+  public FSDataOutputStream create(String path, short replication, int blockSizeByte)
+      throws IOException {
+    // TODO Fix this
+    //return create(path, (short) Math.min(3, mFs.getDefaultReplication()), blockSizeByte);
+    return create(path);
+//    LOG.info(path + " " + replication + " " + blockSizeByte);
+//    IOException te = null;
+//    int cnt = 0;
+//    while (cnt < MAX_TRY) {
+//      try {
+//        return mFs.create(new Path(path), true, 4096, replication, blockSizeByte);
+//      } catch (IOException e) {
+//        cnt ++;
+//        LOG.error(cnt + " : " + e.getMessage(), e);
+//        te = e;
+//        continue;
+//      }
+//    }
+//    throw te;
   }
 
   @Override
@@ -157,8 +188,18 @@ public class UnderFileSystemHdfs extends UnderFileSystem {
 
   @Override
   public long getSpace(String path, SpaceType type) throws IOException {
-    // TODO Hadoop 1.x does not provide user API to get this. Hadoop 2.x provides.
-    // Use JAVA reflection to get the space info for Hadoop 2.x
+    // Ignoring the path given, will give information for entire cluster
+    // as Tachyon can load/store data out of entire HDFS cluster
+    if (mFs instanceof DistributedFileSystem) {
+      switch(type) {
+      case SPACE_TOTAL:
+        return ((DistributedFileSystem) mFs).getDiskStatus().getCapacity();
+      case SPACE_USED:
+        return ((DistributedFileSystem) mFs).getDiskStatus().getDfsUsed();
+      case SPACE_FREE:
+        return ((DistributedFileSystem) mFs).getDiskStatus().getRemaining();
+      }
+    }
     return -1;
   }
 
@@ -171,7 +212,7 @@ public class UnderFileSystemHdfs extends UnderFileSystem {
         if (mFs.exists(new Path(path))) {
           return true;
         }
-        return mFs.mkdirs(new Path(path), null);
+        return mFs.mkdirs(new Path(path));
       } catch (IOException e) {
         cnt ++;
         LOG.error(cnt + " : " + e.getMessage(), e);

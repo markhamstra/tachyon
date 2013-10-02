@@ -112,9 +112,9 @@ public class FileOutStream extends OutStream {
           if (mCurrentBlockLeftByte > tLen) {
             mCurrentBlockOutStream.write(b, tOff, tLen);
             mCurrentBlockLeftByte -= tLen;
+            mWrittenBytes += tLen;
             tOff += tLen;
             tLen = 0;
-            mWrittenBytes += tLen;
           } else {
             mCurrentBlockOutStream.write(b, tOff, (int) mCurrentBlockLeftByte);
             tOff += mCurrentBlockLeftByte;
@@ -179,7 +179,7 @@ public class FileOutStream extends OutStream {
 
             TFS.completeFile(FILE.FID);
           } catch (IOException e) {
-            if (WRITE_TYPE == WriteType.CACHE) {
+            if (WRITE_TYPE == WriteType.MUST_CACHE) {
               throw e;
             }
           }

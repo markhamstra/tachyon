@@ -47,8 +47,8 @@
     <version.template.file>src/main/java/tachyon/Version.java.template</version.template.file>
     <version.file>src/main/java/tachyon/Version.java</version.file>
 
-    <deb.pkg.name>tachyon-${classifier}</deb.pkg.name>
-    <deb.install.path>/usr/share/tachyon-${classifier}</deb.install.path>
+    <deb.pkg.name>tachyon</deb.pkg.name>
+    <deb.install.path>/usr/share/tachyon</deb.install.path>
     <deb.user>root</deb.user>
 
   </properties>
@@ -194,7 +194,6 @@
 
   <build>
     <plugins>
-<!--
       <plugin>
         <artifactId>exec-maven-plugin</artifactId>
         <groupId>org.codehaus.mojo</groupId>
@@ -215,7 +214,6 @@
           </execution>
         </executions>
       </plugin>
--->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -319,16 +317,6 @@
               <goal>jar</goal>
             </goals>
           </execution>
-          <execution>
-            <id>classifier-jar</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-            <configuration>
-              <classifier>${classifier}</classifier>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -337,7 +325,7 @@
         <version>2.0-csd-2</version>
         <configuration>
           <shadedArtifactAttached>true</shadedArtifactAttached>
-          <shadedClassifierName>shaded-${classifier}</shadedClassifierName>
+          <shadedClassifierName>shaded</shadedClassifierName>
           <artifactSet>
           </artifactSet>
           <filters>
@@ -368,42 +356,10 @@
           </execution>
         </executions>
       </plugin>
-
     </plugins>
   </build>
 
   <profiles>
-
-    <!-- <profile> -->
-    <!--   <id>hadoop2</id> -->
-    <!--   <properties> -->
-    <!--     <hadoop.major.version>2</hadoop.major.version> -->
-    <!--     <cdh.version>4.1.2</cdh.version> -->
-    <!--     <hadoop.version>2.0.0-mr1-cdh${cdh.version}</hadoop.version> -->
-    <!--     <classifier>hadoop2</classifier> -->
-    <!--   </properties> -->
-    <!--   <dependencies> -->
-    <!--     <dependency> -->
-    <!--       <groupId>org.apache.hadoop</groupId> -->
-    <!--       <artifactId>hadoop-core</artifactId> -->
-    <!--       <version>${hadoop.version}</version> -->
-    <!--       <optional>true</optional> -->
-    <!--     </dependency> -->
-    <!--     <dependency> -->
-    <!--       <groupId>org.apache.hadoop</groupId> -->
-    <!--       <artifactId>hadoop-client</artifactId> -->
-    <!--       <version>${hadoop.version}</version> -->
-    <!--       <optional>true</optional> -->
-    <!--     </dependency> -->
-    <!--     <dependency> -->
-    <!--       <groupId>org.apache.ant</groupId> -->
-    <!--       <artifactId>ant</artifactId> -->
-    <!--       <version>1.9.0</version> -->
-    <!--       <optional>true</optional> -->
-    <!--     </dependency> -->
-    <!--   </dependencies> -->
-    <!-- </profile> -->
-
     <profile>
       <id>deb</id>
       <build>
@@ -440,7 +396,7 @@
                   <compression>gzip</compression>
                   <dataSet>
                     <data>
-                      <src>${project.build.directory}/${project.artifactId}-${project.version}-shaded-${classifier}.jar</src>
+                      <src>${project.build.directory}/${project.artifactId}-${project.version}-shaded.jar</src>
                       <type>file</type>
                       <mapper>
                         <type>perm</type>

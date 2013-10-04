@@ -468,6 +468,7 @@
         </plugins>
       </build>
     </profile>
+  </profiles>
 
   <reporting>
     <plugins>
